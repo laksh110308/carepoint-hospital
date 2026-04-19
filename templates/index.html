@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🏥 CarePoint Hospital</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.dark { background: #121212; color: #e0e0e0; }
+        body.dark header { background: #1a1a2e; }
+        body.dark .stat-card,
+        body.dark .chart-box,
+        body.dark .info-box,
+        body.dark .form-panel,
+        body.dark .patient-card,
+        body.dark .modal,
+        body.dark .search-box { background: #1e1e1e; }
+        body.dark input,
+        body.dark select { background: #2a2a2a; color: #e0e0e0; border-color: #444; }
+        body.dark .stat-label,
+        body.dark .patient-vitals,
+        body.dark .score,
+        body.dark .detail-label { color: #aaa; }
+        body.dark .detail-row { border-bottom-color: #333; }
+        body.dark .tag.available { background: #1b3a1b; color: #81c784; border-color: #43a047; }
+        body.dark .tag.occupied  { background: #3a1b1b; color: #ef9a9a; border-color: #e53935; }
+        body.dark .tag.busy      { background: #3a2e1b; color: #ffcc80; border-color: #f9a825; }
+        body.dark .info-tag.tag-status    { background: #1a237e; color: #90caf9; }
+        body.dark .info-tag.tag-treatment { background: #3e2723; color: #ffcc80; }
+        body.dark .info-tag.tag-discharged{ background: #1b3a1b; color: #a5d6a7; }
+        body.dark .info-tag.tag-room      { background: #2a1b3a; color: #ce93d8; }
+        body.dark .info-tag.tag-doctor    { background: #1a3a3a; color: #80deea; }
+        body.dark .token-badge            { background: #1a237e; color: #90caf9; }
+        body.dark .queue-panel h2,
+        body.dark .form-panel h2,
+        body.dark .info-box h3,
+        body.dark .chart-box h3 { color: #e0e0e0; }
+
+        header {
+            background: #1a73e8;
+            color: white;
+            padding: 16px 30px;
+            font-size: 22px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-right { display: flex; gap: 12px; align-items: center; }
+
+        .logout-btn {
+            color: white;
+            font-size: 14px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+        }
+
+        .logout-btn:hover { background: rgba(255,255,255,0.35); }
+
+        .dark-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 20px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .dark-toggle:hover { background: rgba(255,255,255,0.35); }
+
+        #alert-banner {
+            display: none;
+            background: #e53935;
+            color: white;
+            padding: 14px 30px;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            animation: flash 1.2s infinite;
+        }
+
+        @keyframes flash {
+            0%   { background: #e53935; }
+            50%  { background: #b71c1c; }
+            100% { background: #e53935; }
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            padding: 20px 24px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            text-align: center;
+            border-top: 4px solid #ccc;
+            transition: background 0.3s;
+        }
+
+        .stat-card.total    { border-top-color: #1a73e8; }
+        .stat-card.critical { border-top-color: #e53935; }
+        .stat-card.moderate { border-top-color: #f9a825; }
+        .stat-card.stable   { border-top-color: #43a047; }
+
+        .stat-number { font-size: 32px; font-weight: bold; margin-bottom: 4px; }
+        .stat-card.total    .stat-number { color: #1a73e8; }
+        .stat-card.critical .stat-number { color: #e53935; }
+        .stat-card.moderate .stat-number { color: #f9a825; }
+        .stat-card.stable   .stat-number { color: #43a047; }
+        .stat-label { font-size: 13px; color: #888; }
+
+        .charts-row {
+            display: flex;
+            gap: 16px;
+            padding: 0 24px 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .chart-box {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: background 0.3s;
+        }
+
+        .chart-box h3 { font-size: 15px; margin-bottom: 16px; color: #333; }
+        .chart-box canvas { max-height: 200px; }
+
+        .info-bars {
+            display: flex;
+            gap: 16px;
+            padding: 0 24px 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .info-box {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: background 0.3s;
+        }
+
+        .info-box h3 { font-size: 15px; margin-bottom: 12px; color: #333; }
+        .tags-list { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .tag {
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            border: 2px solid #ccc;
+            transition: background 0.3s;
+        }
+
+        .tag.available { background: #e8f5e9; color: #2e7d32; border-color: #43a047; }
+        .tag.occupied  { background: #fdecea; color: #c62828; border-color: #e53935; }
+        .tag.busy      { background: #fff3e0; color: #e65100; border-color: #f9a825; }
+
+        .container {
+            display: flex;
+            gap: 24px;
+            padding: 0 24px 24px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .form-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 360px;
+            min-width: 360px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            height: fit-content;
+            transition: background 0.3s;
+        }
+
+        .form-panel h2 { margin-bottom: 20px; color: #1a73e8; font-size: 18px; }
+        .form-group { margin-bottom: 14px; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        input:focus { border-color: #1a73e8; }
+
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        .btn-primary:hover { background: #1558b0; }
+
+        #form-message {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success { background: #e6f4ea; color: #2d7a3a; }
+        .error   { background: #fdecea; color: #c62828; }
+
+        .search-box {
+            background: white;
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border: 2px solid #e0e0e0;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .search-box:focus-within { border-color: #1a73e8; }
+
+        #search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            background: transparent;
+            padding: 4px 0;
+        }
+
+        .search-icon { font-size: 18px; color: #888; }
+
+        #search-count { font-size: 13px; color: #888; white-space: nowrap; }
+
+        .btn-clear {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #888;
+            padding: 0 4px;
+            display: none;
+        }
+
+        .btn-clear:hover { color: #e53935; }
+
+        .queue-panel { flex: 1; }
+        .queue-panel h2 { font-size: 18px; margin-bottom: 16px; color: #333; }
+
+        .patient-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            border-left: 6px solid #ccc;
+            transition: background 0.3s;
+        }
+
+        .critical { border-left-color: #e53935; }
+        .moderate { border-left-color: #f9a825; }
+        .stable   { border-left-color: #43a047; }
+
+        .card-top    { display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-mid    { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+        .card-bottom { display: flex; align-items: center; margin-top: 10px; gap: 8px; flex-wrap: wrap; }
+
+        .patient-name { font-size: 17px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .patient-vitals { font-size: 13px; color: #666; margin-top: 5px; }
+
+        /* ── Token badge ── */
+        .token-badge {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .badge { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; color: white; }
+        .badge-critical { background: #e53935; }
+        .badge-moderate { background: #f9a825; }
+        .badge-stable   { background: #43a047; }
+        .score { font-size: 12px; color: #888; margin-top: 4px; text-align: right; }
+
+        .highlight { background: #fff176; color: #333; border-radius: 3px; padding: 0 2px; }
+
+        select {
+            padding: 7px 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+            background: #f9f9f9;
+            transition: background 0.3s;
+        }
+
+        .btn { padding: 7px 14px; color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
+        .btn-blue   { background: #1a73e8; } .btn-blue:hover   { background: #1558b0; }
+        .btn-red    { background: #e53935; } .btn-red:hover    { background: #b71c1c; }
+        .btn-green  { background: #43a047; } .btn-green:hover  { background: #2e7d32; }
+        .btn-orange { background: #f9a825; } .btn-orange:hover { background: #f57f17; }
+        .btn-purple { background: #8e24aa; } .btn-purple:hover { background: #6a1b9a; }
+        .btn-teal   { background: #00897b; } .btn-teal:hover   { background: #00695c; }
+
+        .info-tag { font-size: 12px; padding: 4px 10px; border-radius: 12px; font-weight: bold; white-space: nowrap; }
+        .tag-status    { background: #e8f0fe; color: #1a73e8; }
+        .tag-treatment { background: #fff3e0; color: #e65100; }
+        .tag-discharged{ background: #e8f5e9; color: #2e7d32; }
+        .tag-room      { background: #f3e5f5; color: #6a1b9a; }
+        .tag-doctor    { background: #e0f7fa; color: #00838f; }
+
+        #no-patients { text-align: center; color: #aaa; font-size: 15px; margin-top: 40px; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 480px;
+            max-width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        .modal h2 { font-size: 20px; margin-bottom: 20px; color: #1a73e8; }
+
+        .modal-close {
+            position: absolute; top: 16px; right: 20px;
+            font-size: 22px; cursor: pointer; color: #888;
+            background: none; border: none; padding: 0;
+        }
+
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: #888; }
+        .detail-value { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span>🏥 CarePoint Hospital</span>
+    <div class="header-right">
+        <button class="dark-toggle" onclick="toggleDark()" id="dark-btn">🌙</button>
+        <a href="/logout" class="logout-btn">🚪 Logout</a>
+    </div>
+</header>
+
+<div id="alert-banner"></div>
+
+<div class="stats-bar">
+    <div class="stat-card total">
+        <div class="stat-number" id="stat-total">0</div>
+        <div class="stat-label">Total Patients</div>
+    </div>
+    <div class="stat-card critical">
+        <div class="stat-number" id="stat-critical">0</div>
+        <div class="stat-label">🔴 Critical</div>
+    </div>
+    <div class="stat-card moderate">
+        <div class="stat-number" id="stat-moderate">0</div>
+        <div class="stat-label">🟡 Moderate</div>
+    </div>
+    <div class="stat-card stable">
+        <div class="stat-number" id="stat-stable">0</div>
+        <div class="stat-label">🟢 Stable</div>
+    </div>
+</div>
+
+<div class="charts-row">
+    <div class="chart-box">
+        <h3>🥧 Priority Distribution</h3>
+        <canvas id="pieChart"></canvas>
+    </div>
+    <div class="chart-box">
+        <h3>📊 Patient Status Breakdown</h3>
+        <canvas id="barChart"></canvas>
+    </div>
+</div>
+
+<div class="info-bars">
+    <div class="info-box">
+        <h3>🚪 Room Status</h3>
+        <div class="tags-list" id="rooms-list">Loading...</div>
+    </div>
+    <div class="info-box">
+        <h3>👨‍⚕️ Doctor Availability</h3>
+        <div class="tags-list" id="doctors-list">Loading...</div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="form-panel">
+        <h2>➕ Add New Patient</h2>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="name" placeholder="e.g. John Smith">
+        </div>
+        <div class="form-group">
+            <label>Age</label>
+            <input type="number" id="age" placeholder="e.g. 45">
+        </div>
+        <div class="form-group">
+            <label>Heart Rate (bpm)</label>
+            <input type="number" id="heart_rate" placeholder="e.g. 95">
+        </div>
+        <div class="form-group">
+            <label>Blood Pressure</label>
+            <input type="text" id="blood_pressure" placeholder="e.g. 140/90">
+        </div>
+        <div class="form-group">
+            <label>Temperature (°C)</label>
+            <input type="number" step="0.1" id="temperature" placeholder="e.g. 38.5">
+        </div>
+        <button class="btn-primary" onclick="addPatient()">Add Patient</button>
+        <div id="form-message"></div>
+    </div>
+
+    <div class="queue-panel">
+        <h2>🚨 Triage Queue <span id="total-count">(0 patients)</span></h2>
+
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input"
+                placeholder="Search by name, token, doctor, room, status..."
+                oninput="handleSearch()">
+            <span id="search-count"></span>
+            <button class="btn-clear" id="clear-btn" onclick="clearSearch()">✕</button>
+        </div>
+
+        <div id="patient-list">
+            <p id="no-patients">No patients yet. Add one to get started.</p>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModalDirect()">✕</button>
+        <h2>🧾 Patient Details</h2>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<script>
+    let pieChart    = null;
+    let barChart    = null;
+    let allPatients = [];
+
+    function toggleDark() {
+        document.body.classList.toggle("dark");
+        const dark = document.body.classList.contains("dark");
+        document.getElementById("dark-btn").textContent = dark ? "☀️" : "🌙";
+        localStorage.setItem("darkMode", dark);
+    }
+
+    if (localStorage.getItem("darkMode") === "true") {
+        document.body.classList.add("dark");
+        document.getElementById("dark-btn").textContent = "☀️";
+    }
+
+    window.onload = () => {
+        loadPatients();
+        loadStats();
+        loadRooms();
+        loadDoctors();
+        setInterval(() => { loadPatients(); loadStats(); }, 10000);
+    };
+
+    async function addPatient() {
+        const name           = document.getElementById("name").value.trim();
+        const age            = parseInt(document.getElementById("age").value);
+        const heart_rate     = parseInt(document.getElementById("heart_rate").value);
+        const blood_pressure = document.getElementById("blood_pressure").value.trim();
+        const temperature    = parseFloat(document.getElementById("temperature").value);
+
+        if (!name || !age || !heart_rate || !blood_pressure || !temperature) {
+            showMessage("❌ Please fill in all fields!", "error"); return;
+        }
+
+        const res  = await fetch("/api/patients", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, age, heart_rate, blood_pressure, temperature })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMessage(`✅ Patient added! Token: ${data.patient.token}`, "success");
+            clearForm(); loadPatients(); loadStats();
+        } else {
+            showMessage("❌ " + data.error, "error");
+        }
+    }
+
+    async function loadPatients() {
+        const res  = await fetch("/api/patients");
+        const data = await res.json();
+        allPatients = data.patients;
+
+        document.getElementById("total-count").textContent =
+            `(${data.total} patient${data.total !== 1 ? "s" : ""})`;
+
+        const alerts = allPatients.filter(p =>
+            p.priority_level.includes("CRITICAL") &&
+            p.status === "waiting" &&
+            (!p.doctor || !p.room)
+        );
+
+        const banner = document.getElementById("alert-banner");
+        if (alerts.length > 0) {
+            banner.textContent = `🚨 CRITICAL ALERT: ${alerts.length} critical patient(s) need immediate attention! → ${alerts.map(p => p.name).join(", ")}`;
+            banner.style.display = "block";
+        } else {
+            banner.style.display = "none";
+        }
+
+        handleSearch();
+    }
+
+    function handleSearch() {
+        const query    = document.getElementById("search-input").value.trim().toLowerCase();
+        const clearBtn = document.getElementById("clear-btn");
+        const countEl  = document.getElementById("search-count");
+
+        clearBtn.style.display = query ? "block" : "none";
+
+        const filtered = query
+            ? allPatients.filter(p =>
+                p.name.toLowerCase().includes(query)          ||
+                p.token.toLowerCase().includes(query)         ||
+                (p.doctor && p.doctor.toLowerCase().includes(query)) ||
+                (p.room   && p.room.toLowerCase().includes(query))   ||
+                p.status.toLowerCase().includes(query)               ||
+                p.priority_level.toLowerCase().includes(query)
+              )
+            : allPatients;
+
+        countEl.textContent = query
+            ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`
+            : "";
+
+        renderPatients(filtered, query);
+    }
+
+    function clearSearch() {
+        document.getElementById("search-input").value = "";
+        handleSearch();
+        document.getElementById("search-input").focus();
+    }
+
+    function highlight(text, query) {
+        if (!query) return text;
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi");
+        return String(text).replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function renderPatients(list, query = "") {
+        const container = document.getElementById("patient-list");
+
+        if (list.length === 0) {
+            container.innerHTML = `<p id="no-patients">${
+                query ? `😕 No patients found for "<strong>${query}</strong>"` : "No patients yet."
+            }</p>`;
+            return;
+        }
+
+        container.innerHTML = list.map((p, i) => {
+            const lvl = p.priority_level.includes("CRITICAL") ? "critical"
+                      : p.priority_level.includes("MODERATE") ? "moderate" : "stable";
+            const emoji       = lvl === "critical" ? "🔴" : lvl === "moderate" ? "🟡" : "🟢";
+            const statusClass = p.status === "in-treatment" ? "tag-treatment"
+                              : p.status === "discharged"   ? "tag-discharged" : "tag-status";
+            const statusLabel = p.status === "waiting"      ? "⏳ Waiting"
+                              : p.status === "in-treatment" ? "🩺 In Treatment" : "✅ Discharged";
+            const roomSection = p.room
+                ? `<span class="info-tag tag-room">🚪 Room ${p.room}</span>
+                   <button class="btn btn-orange" onclick="releaseRoom('${p.id}')">🔓 Release Room</button>`
+                : `<button class="btn btn-green" onclick="assignRoom('${p.id}')">🏨 Assign Room</button>`;
+            const docSection = p.doctor
+                ? `<span class="info-tag tag-doctor">👨‍⚕️ ${p.doctor}</span>
+                   <button class="btn btn-orange" onclick="releaseDoctor('${p.id}')">🔓 Release Doctor</button>`
+                : `<button class="btn btn-purple" onclick="assignDoctor('${p.id}')">👨‍⚕️ Assign Doctor</button>`;
+
+            return `
+            <div class="patient-card ${lvl}" id="card-${p.id}">
+                <div class="card-top">
+                    <div>
+                        <div class="patient-name">
+                            <span class="token-badge">${highlight(p.token, query)}</span>
+                            ${highlight(p.name, query)}
+                        </div>
+                        <div class="patient-vitals">
+                            ❤️ ${p.heart_rate} bpm &nbsp;|&nbsp;
+                            🌡️ ${p.temperature}°C &nbsp;|&nbsp;
+                            💉 ${p.blood_pressure} &nbsp;|&nbsp;
+                            🕐 ${p.arrived_at}
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="badge badge-${lvl}">${emoji} ${lvl.toUpperCase()}</div>
+                        <div class="score">Score: ${p.priority_score}</div>
+                    </div>
+                </div>
+                <div class="card-mid">
+                    <span class="info-tag ${statusClass}">${statusLabel}</span>
+                    ${roomSection}
+                    ${docSection}
+                </div>
+                <div class="card-bottom">
+                    <select onchange="updateStatus('${p.id}', this.value)">
+                        <option value="">Change Status...</option>
+                        <option value="waiting">⏳ Waiting</option>
+                        <option value="in-treatment">🩺 In Treatment</option>
+                        <option value="discharged">✅ Discharged</option>
+                    </select>
+                    <button class="btn btn-blue" onclick='showDetails(${JSON.stringify(p)})'>🔍 Details</button>
+                    <button class="btn btn-teal" onclick='printReport(${JSON.stringify(p)})'>🖨️ Print</button>
+                    <button class="btn btn-red"  onclick="deletePatient('${p.id}')">🗑️ Remove</button>
+                </div>
+            </div>`;
+        }).join("");
+    }
+
+    async function loadStats() {
+        const res  = await fetch("/api/stats");
+        const data = await res.json();
+        document.getElementById("stat-total").textContent    = data.total;
+        document.getElementById("stat-critical").textContent = data.critical;
+        document.getElementById("stat-moderate").textContent = data.moderate;
+        document.getElementById("stat-stable").textContent   = data.stable;
+        updateCharts(data);
+    }
+
+    function updateCharts(data) {
+        if (pieChart) pieChart.destroy();
+        pieChart = new Chart(document.getElementById("pieChart"), {
+            type: "doughnut",
+            data: {
+                labels: ["Critical", "Moderate", "Stable"],
+                datasets: [{ data: [data.critical, data.moderate, data.stable], backgroundColor: ["#e53935","#f9a825","#43a047"], borderWidth: 2, borderColor: "#fff" }]
+            },
+            options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+        });
+
+        if (barChart) barChart.destroy();
+        barChart = new Chart(document.getElementById("barChart"), {
+            type: "bar",
+            data: {
+                labels: ["Waiting", "In Treatment", "Discharged"],
+                datasets: [{ label: "Patients", data: [data.waiting, data.in_treatment, data.discharged], backgroundColor: ["#1a73e8","#f9a825","#43a047"], borderRadius: 8, borderWidth: 0 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+
+    async function loadRooms() {
+        const res  = await fetch("/api/rooms");
+        const data = await res.json();
+        document.getElementById("rooms-list").innerHTML =
+            data.rooms.map(r => `<span class="tag ${r.status}">🚪 ${r.room_number} — ${r.status === "available" ? "✅ Free" : "🔴 Occupied"}</span>`).join("");
+    }
+
+    async function loadDoctors() {
+        const res  = await fetch("/api/doctors");
+        const data = await res.json();
+        document.getElementById("doctors-list").innerHTML =
+            data.doctors.map(d => `<span class="tag ${d.available ? 'available' : 'busy'}">👨‍⚕️ ${d.name} (${d.specialty}) — ${d.available ? "✅ Free" : "🔴 Busy"}</span>`).join("");
+    }
+
+    async function assignRoom(id) {
+        const res = await fetch(`/api/rooms/assign/${id}`, { method: "POST" });
+        const data = await res.json();
+        alert(data.message || data.error);
+        loadPatients(); loadRooms();
+    }
+
+    async function releaseRoom(id) {
+        const res = await fetch(`/api/rooms/release/${id}`, { method: "POST" });
+        const data = await res.json();
+        alert(data.message || data.error);
+        loadPatients(); loadRooms();
+    }
+
+    async function assignDoctor(id) {
+        const res = await fetch(`/api/doctors/assign/${id}`, { method: "POST" });
+        const data = await res.json();
+        alert(data.message || data.error);
+        loadPatients(); loadDoctors();
+    }
+
+    async function releaseDoctor(id) {
+        const res = await fetch(`/api/doctors/release/${id}`, { method: "POST" });
+        const data = await res.json();
+        alert(data.message || data.error);
+        loadPatients(); loadDoctors();
+    }
+
+    async function updateStatus(id, status) {
+        if (!status) return;
+        await fetch(`/api/patients/${id}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status })
+        });
+        loadPatients(); loadStats();
+    }
+
+    async function deletePatient(id) {
+        if (!confirm("Remove this patient?")) return;
+        await fetch(`/api/patients/${id}`, { method: "DELETE" });
+        loadPatients(); loadStats(); loadRooms(); loadDoctors();
+    }
+
+    function showDetails(p) {
+        document.getElementById("modal-body").innerHTML = `
+            <div class="detail-row"><span class="detail-label">Token</span><span class="detail-value">${p.token}</span></div>
+            <div class="detail-row"><span class="detail-label">ID</span><span class="detail-value">${p.id}</span></div>
+            <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${p.name}</span></div>
+            <div class="detail-row"><span class="detail-label">Age</span><span class="detail-value">${p.age} yrs</span></div>
+            <div class="detail-row"><span class="detail-label">Heart Rate</span><span class="detail-value">❤️ ${p.heart_rate} bpm</span></div>
+            <div class="detail-row"><span class="detail-label">Blood Pressure</span><span class="detail-value">💉 ${p.blood_pressure}</span></div>
+            <div class="detail-row"><span class="detail-label">Temperature</span><span class="detail-value">🌡️ ${p.temperature}°C</span></div>
+            <div class="detail-row"><span class="detail-label">Priority Score</span><span class="detail-value">${p.priority_score} / 100</span></div>
+            <div class="detail-row"><span class="detail-label">Priority Level</span><span class="detail-value">${p.priority_level}</span></div>
+            <div class="detail-row"><span class="detail-label">Arrived At</span><span class="detail-value">🕐 ${p.arrived_at}</span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${p.status}</span></div>
+            <div class="detail-row"><span class="detail-label">Room</span><span class="detail-value">${p.room ? "🚪 Room " + p.room : "Not assigned"}</span></div>
+            <div class="detail-row"><span class="detail-label">Doctor</span><span class="detail-value">${p.doctor ? "👨‍⚕️ " + p.doctor : "Not assigned"}</span></div>
+        `;
+        document.getElementById("modal-overlay").classList.add("show");
+    }
+
+    function printReport(p) {
+        const level = p.priority_level.includes("CRITICAL") ? "🔴 CRITICAL"
+                    : p.priority_level.includes("MODERATE") ? "🟡 MODERATE" : "🟢 STABLE";
+        const color = p.priority_score >= 60 ? '#e53935' : p.priority_score >= 30 ? '#f9a825' : '#43a047';
+        const win = window.open("", "_blank");
+        win.document.write(`<!DOCTYPE html><html><head><title>Report - ${p.name}</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 40px; max-width: 600px; margin: auto; color: #333; }
+            .header { text-align: center; border-bottom: 3px solid #1a73e8; padding-bottom: 20px; margin-bottom: 30px; }
+            .header h1 { color: #1a73e8; font-size: 24px; }
+            .header p  { color: #888; font-size: 14px; margin-top: 4px; }
+            .badge { display:inline-block; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 16px; margin: 16px 0; background:#f5f5f5; }
+            .token { display:inline-block; padding: 4px 12px; background:#e8f0fe; color:#1a73e8; border-radius:6px; font-weight:bold; font-size:14px; margin-bottom:16px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            td { padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; }
+            td:first-child { color: #888; width: 40%; font-weight: bold; }
+            .bar-bg { background:#eee; border-radius:10px; height:10px; margin-top:6px; overflow:hidden; }
+            .bar-fill { height:100%; border-radius:10px; background:${color}; width:${p.priority_score}%; }
+            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #aaa; border-top: 1px solid #eee; padding-top: 16px; }
+            .print-btn { display:block; margin: 20px auto; padding:12px 30px; background:#1a73e8; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
+            @media print { .print-btn { display: none; } }
+        </style></head><body>
+        <div class="header"><h1>🏥 Smart Hospital Triage System</h1><p>Patient Report — ${new Date().toLocaleString()}</p></div>
+        <div style="text-align:center">
+            <div class="token">🎟️ Token: ${p.token}</div><br>
+            <span class="badge">${level} &nbsp;|&nbsp; Score: ${p.priority_score}/100</span>
+        </div>
+        <table>
+            <tr><td>Token</td><td><strong>${p.token}</strong></td></tr>
+            <tr><td>Patient ID</td><td>${p.id}</td></tr>
+            <tr><td>Full Name</td><td><strong>${p.name}</strong></td></tr>
+            <tr><td>Age</td><td>${p.age} years</td></tr>
+            <tr><td>Arrived At</td><td>🕐 ${p.arrived_at}</td></tr>
+            <tr><td>Status</td><td>${p.status}</td></tr>
+            <tr><td>Priority Score</td><td>${p.priority_score}/100<div class="bar-bg"><div class="bar-fill"></div></div></td></tr>
+            <tr><td>Heart Rate</td><td>❤️ ${p.heart_rate} bpm</td></tr>
+            <tr><td>Blood Pressure</td><td>💉 ${p.blood_pressure}</td></tr>
+            <tr><td>Temperature</td><td>🌡️ ${p.temperature}°C</td></tr>
+            <tr><td>Room</td><td>${p.room ? "🚪 Room " + p.room : "Not assigned"}</td></tr>
+            <tr><td>Doctor</td><td>${p.doctor ? "👨‍⚕️ " + p.doctor : "Not assigned"}</td></tr>
+        </table>
+        <div class="footer">Auto-generated triage report. For official use only.</div>
+        <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        </body></html>`);
+        win.document.close();
+    }
+
+    function closeModal(e) {
+        if (e.target.id === "modal-overlay")
+            document.getElementById("modal-overlay").classList.remove("show");
+    }
+
+    function closeModalDirect() {
+        document.getElementById("modal-overlay").classList.remove("show");
+    }
+
+    function showMessage(msg, type) {
+        const el = document.getElementById("form-message");
+        el.textContent = msg; el.className = type; el.style.display = "block";
+        setTimeout(() => el.style.display = "none", 3000);
+    }
+
+    function clearForm() {
+        ["name","age","heart_rate","blood_pressure","temperature"]
+            .forEach(id => document.getElementById(id).value = "");
+    }
+</script>
+</body>
+</html>
