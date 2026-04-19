@@ -10,7 +10,8 @@ app.secret_key = "hospital_secret_2024"
 app.config["SQLALCHEMY_DATABASE_URI"]        = "sqlite:///hospital.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
-
+with app.app_context():
+    db.create_all()
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "hospital123"
 
