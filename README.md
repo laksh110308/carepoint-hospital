@@ -25,7 +25,7 @@ A Smart Hospital Triage System built using Flask.
 ## Screenshots
 
 ### 🔐 Login Page
-![Login](login page.png)
+![Login](login.png)https://github.com/laksh110308/carepoint-hospital/blob/main/login.png?raw=true
 
 ### 📊 Dashboard
 ![Dashboard](dashboard.png)
