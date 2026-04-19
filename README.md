@@ -1,5 +1,6 @@
 # CarePoint Hospital Triage System 🏥
-
+## 🚀 Live Demo
+https://carepoint-hospital.onrender.com
 A Smart Hospital Triage System built using Flask.
 
 ## Features
